@@ -1,4 +1,4 @@
-package com.insta;
+package com.insta.services;
 
 
 import org.openqa.selenium.WebDriver;
