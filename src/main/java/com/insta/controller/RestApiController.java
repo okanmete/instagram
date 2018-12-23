@@ -1,8 +1,10 @@
 package com.insta.controller;
 
 
+import com.insta.Props;
 import com.insta.services.InstaService;
 import com.insta.services.WebDriverService;
+import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -15,15 +17,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.openqa.selenium.WebDriver;
 
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 
 @RestController
 public class RestApiController {
 
     private WebDriver driver = null;
 
-    private InstaService instaService;
+    private ScheduledExecutorService scheduler = newSingleThreadScheduledExecutor();
 
-    @RequestMapping(value = "/login", method =RequestMethod.POST)
+    @RequestMapping(value = "/login", method = RequestMethod.POST)
     public void login(@RequestBody Map<String, String> data) {
         String userName = data.get("username");
         String password = data.get("password");
@@ -38,22 +45,34 @@ public class RestApiController {
         driver.findElement(By.xpath("//*[@id=\"react-root\"]/section/main/div/article/div/div[1]/div/form/div[3]/button")).click();
     }
 
-    @RequestMapping(value = "/like-hashtag", method =RequestMethod.POST)
-    public void likeHashtag(@RequestBody Map<String, String> data) {
-        String hashtag = data.get("hashtag");
-        String timeInterval = data.get("time");
-        driver.get("http://www.instagram.com/explore/tags/" + hashtag);
-        //System.out.println(driver.getPageSource());
-        //instaService.findMostRecentContent(driver.getPageSource());
-        String lastPhotoLink = "https://www.instagram.com/p/BrpiTrXnE8u/";
-        driver.get(lastPhotoLink);
-        driver.findElement(By.xpath("//*[@id=\"react-root\"]/section/main/div/div/article/div[2]/section[1]/span[1]/button/span")).click();
+    @RequestMapping(value = "/like-hashtag", method = RequestMethod.POST)
+    public void likeHashtag(@RequestBody Map<String, Object> data) {
+        String hashtag = (String) data.get("hashtag");
+        int timeInterval = (int) data.get("time");
 
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                driver.get("http://www.instagram.com/explore/tags/" + hashtag);
+                String mostRecentContentId = StringUtils.
+                        substringBetween(driver.getPageSource(), "\"shortcode\":\"", "\"");
+                String lastPhotoLink = "https://www.instagram.com/p/" + mostRecentContentId;
+                driver.get(lastPhotoLink);
+                likeTheContent(driver);
+            }
+        };
+
+        scheduler.scheduleAtFixedRate(task, 0, timeInterval, TimeUnit.SECONDS);
     }
 
+    private boolean isNotLiked(String pageSource) {
+        return (pageSource.contains("<span class=\"glyphsSpriteHeart__outline__24__grey_9 u-__7\" aria-label=\"Like"));
+    }
 
-
-
-
+    private void likeTheContent(WebDriver driver) {
+        if (isNotLiked(driver.getPageSource())) {
+            driver.findElement(By.xpath(Props.getInstance().getLikeButtonXpath())).click();
+        }
+    }
 
 }

@@ -17,6 +17,12 @@ public class Props {
 
     private String chromeDriver;
 
+    private String likeButtonXpath;
+
+    public String getLikeButtonXpath() {
+        return likeButtonXpath;
+    }
+
     public String getChromeDriver() {
         return chromeDriver;
     }
@@ -53,7 +59,7 @@ public class Props {
         String chromeDriver = prop.getProperty("chrome_driver");
 
         this.chromeDriver = defined(chromeDriver) ? chromeDriver : Constants.CHROME_DRIVER;
-
+        this.likeButtonXpath = defined(likeButtonXpath) ? likeButtonXpath : Constants.LIKE_BUTTON_XPATH;
     }
     private boolean defined(String s) {
         return s != null && !s.isEmpty();
